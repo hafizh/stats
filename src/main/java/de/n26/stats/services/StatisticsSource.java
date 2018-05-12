@@ -3,6 +3,7 @@ package de.n26.stats.services;
 import com.codepoetics.protonpack.Indexed;
 import de.n26.stats.domain.Statistics;
 import de.n26.stats.domain.Transaction;
+import de.n26.stats.utils.DoubleStats;
 import org.springframework.lang.NonNull;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
@@ -37,27 +38,12 @@ public class StatisticsSource {
         sortedTransactions.removeAll(toBeRemoved);
     }
 
-
     @NonNull
-    public Statistics getStats() {
-        List<Double> last60Seconds = sortedTransactions.stream()
-                .filter(t -> !tooOld(t.getTimestamp()))
+    synchronized public Statistics getStats() {
+        return skipWhile(sortedTransactions.stream(), t -> tooOld(t.getTimestamp()))
                 .map(Transaction::getAmount)
-                .collect(toList());
-
-        final long count = last60Seconds.stream().collect(Collectors.counting());
-        final double avg = last60Seconds.stream().collect(Collectors.averagingDouble(a -> a));
-        final double max = last60Seconds.stream().max(Double::compareTo).orElse(0d);
-        final double min = last60Seconds.stream().min(Double::compareTo).orElse(Double.MAX_VALUE);
-        final double sum = last60Seconds.stream().collect(Collectors.summingDouble(a -> a));
-
-        return Statistics.builder()
-                .avg(avg)
-                .count(count)
-                .max(max)
-                .min(min)
-                .sum(sum)
-                .build();
+                .collect(DoubleStats.collector())
+                .toStatistics();
     }
 
     // @VisibleForTesting
