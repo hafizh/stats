@@ -49,4 +49,12 @@ public class TransactionsControllerTest {
                 .andExpect(status().isCreated())
                 .andDo(result -> assertThat(result.getResponse().getContentLength(), is(0)));
     }
+
+    @Test
+    public void addTransactionBadRequest() throws Exception {
+        mockMvc.perform(post("/transactions")
+                .content("{\"amount\":\"-1\",\"timestamp\":\"" + Instant.now().toEpochMilli() + "\"}")
+                .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isBadRequest());
+    }
 }
