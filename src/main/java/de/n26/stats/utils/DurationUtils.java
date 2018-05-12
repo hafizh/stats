@@ -4,7 +4,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.concurrent.TimeUnit;
 
-public class DurationUtils {
+public final class DurationUtils {
 
     private static final long limit = TimeUnit.MINUTES.toSeconds(1);
 

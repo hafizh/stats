@@ -3,6 +3,7 @@ package de.n26.stats.services;
 import com.codepoetics.protonpack.Indexed;
 import de.n26.stats.domain.Statistics;
 import de.n26.stats.domain.Transaction;
+import org.springframework.lang.NonNull;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
@@ -20,10 +21,11 @@ import static java.util.stream.Collectors.toList;
 @Service
 public class StatisticsSource {
 
+    // @VisibleForTesting
     final List<Transaction> sortedTransactions = Collections.synchronizedList(new LinkedList<>());
 
     @Async
-    synchronized public void insertTransaction(final Transaction transaction) {
+    synchronized public void insertTransaction(@NonNull final Transaction transaction) {
         List<Transaction> toBeRemoved = sortedTransactions.stream()
                 .filter(t -> tooOld(t.getTimestamp()))
                 .collect(toList());
@@ -36,15 +38,7 @@ public class StatisticsSource {
     }
 
 
-    int getIndex(List<Transaction> transactions, Instant timestamp) {
-        return skipWhile(zipWithIndex(transactions.stream()),
-                i -> i.getValue().getTimestamp().isBefore(timestamp))
-                .map(Indexed::getIndex)
-                .mapToInt(Long::intValue)
-                .findFirst()
-                .orElse(transactions.size());
-    }
-
+    @NonNull
     public Statistics getStats() {
         List<Double> last60Seconds = sortedTransactions.stream()
                 .filter(t -> !tooOld(t.getTimestamp()))
@@ -64,6 +58,16 @@ public class StatisticsSource {
                 .min(min)
                 .sum(sum)
                 .build();
+    }
+
+    // @VisibleForTesting
+    int getIndex(List<Transaction> transactions, Instant timestamp) {
+        return skipWhile(zipWithIndex(transactions.stream()),
+                i -> i.getValue().getTimestamp().isBefore(timestamp))
+                .map(Indexed::getIndex)
+                .mapToInt(Long::intValue)
+                .findFirst()
+                .orElse(transactions.size());
     }
 
 }
