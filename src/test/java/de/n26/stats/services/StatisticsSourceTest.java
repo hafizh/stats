@@ -12,6 +12,7 @@ import java.util.Arrays;
 import java.util.List;
 
 import static org.hamcrest.CoreMatchers.is;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertThat;
 
 @RunWith(BlockJUnit4ClassRunner.class)
@@ -33,34 +34,13 @@ public class StatisticsSourceTest {
 
     @Test
     public void insertTransaction() {
-        assertThat(statisticsSource.sortedTransactions.size(), is(4));
-        assertThat(statisticsSource.sortedTransactions.iterator().next().getAmount(), is(11d));
+        assertThat(statisticsSource.transactionsQueue.size(), is(4));
+        assertNotNull(statisticsSource.transactionsQueue.peek());
+        assertThat(statisticsSource.transactionsQueue.peek().getAmount(), is(11d));
     }
-
 
     @Test
     public void getStats() {
         assertThat(statisticsSource.getStats(), is(new Statistics(50d, 12.5, 14d, 11d, 4l)));
-    }
-
-    @Test
-    public void getIndexFromTheMiddle() {
-        Instant now = Instant.now();
-        List<Transaction> transactions = Arrays.asList(new Transaction(1d, now.minusSeconds(15)), new Transaction(2d, now));
-        assertThat(statisticsSource.getIndex(transactions, now.minusSeconds(10)), is(1));
-    }
-
-    @Test
-    public void getIndexFromHead() {
-        Instant now = Instant.now();
-        List<Transaction> transactions = Arrays.asList(new Transaction(1d, now.minusSeconds(15)), new Transaction(2d, now));
-        assertThat(statisticsSource.getIndex(transactions, now.minusSeconds(20)), is(0));
-    }
-
-    @Test
-    public void getIndexFromTail() {
-        Instant now = Instant.now();
-        List<Transaction> transactions = Arrays.asList(new Transaction(1d, now.minusSeconds(15)), new Transaction(2d, now));
-        assertThat(statisticsSource.getIndex(transactions, now.plusSeconds(10)), is(2));
     }
 }

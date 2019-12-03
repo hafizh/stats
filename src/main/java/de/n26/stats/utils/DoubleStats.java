@@ -11,8 +11,8 @@ import java.util.stream.Collector;
 @AllArgsConstructor
 @NoArgsConstructor
 public class DoubleStats {
-    long count = 0;
-    Double min = Double.MAX_VALUE;
+    long count = 0L;
+    Double min = 0d;
     Double max = 0d;
     Double avg = 0d;
     Double sum = 0d;
@@ -27,7 +27,7 @@ public class DoubleStats {
                 .build();
     }
 
-    public void accept(Double val) {
+    void accept(Double val) {
         min = Math.min(val, min);
         max = Math.max(val, max);
         sum += val;
@@ -35,7 +35,7 @@ public class DoubleStats {
         avg = sum / count;
     }
 
-    public DoubleStats combine(DoubleStats that) {
+    DoubleStats combine(DoubleStats that) {
         if (this.count == 0) return that;
         if (that.count == 0) return this;
 
