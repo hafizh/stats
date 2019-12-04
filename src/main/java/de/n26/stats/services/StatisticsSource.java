@@ -10,8 +10,12 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
+import java.time.Instant;
 import java.util.Comparator;
+import java.util.Map;
+import java.util.Optional;
 import java.util.Queue;
+import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.PriorityBlockingQueue;
 
 import static de.n26.stats.utils.DurationUtils.tooOld;
@@ -25,10 +29,15 @@ public class StatisticsSource {
     final Queue<Transaction> transactionsQueue =
       new PriorityBlockingQueue<>(1000, Comparator.comparing(Transaction::getTimestamp));
 
+    final Map<Long, DoubleStats> statsBySeconds = new ConcurrentSkipListMap<>();
+
     @Async
     public void insertTransaction(@NonNull final Transaction transaction) {
         if(!tooOld(transaction.getTimestamp())) {
-            transactionsQueue.add(transaction);
+            long key = transaction.getTimestamp().getEpochSecond();
+            DoubleStats newStats = new DoubleStats(transaction.getAmount());
+
+            statsBySeconds.merge(key, newStats, DoubleStats::combine);
         } else {
             logger.debug("Not inserted, too old: {}", transaction);
         }
@@ -36,18 +45,19 @@ public class StatisticsSource {
 
     @NonNull
     public Statistics getStats() {
-        return transactionsQueue.stream()
-                .map(Transaction::getAmount)
+        return statsBySeconds.values().parallelStream()
                 .collect(DoubleStats.collector())
                 .toStatistics();
     }
 
-    @Scheduled(fixedDelay = 1000)
+    @Scheduled(fixedDelay = 1000, initialDelay = 1000)
     public void cleanOldTransactions() {
-        logger.debug("Starting clean up of old transactions");
+        long now = Instant.now().getEpochSecond();
+        logger.debug("Starting clean up of old stats");
 
-        while(transactionsQueue.peek() != null && tooOld(transactionsQueue.peek().getTimestamp())) {
-            logger.debug("Removing too old: {}", transactionsQueue.poll());
-        }
+        Optional<DoubleStats> removed = Optional.ofNullable(statsBySeconds.remove(now - 60));
+
+        if(removed.isPresent()) logger.debug("Cleaning up oldest: {} from {}, {}", now, now - 60, removed.get());
+        else logger.debug("Nothing to clean");
     }
 }
